@@ -85,14 +85,13 @@ export CDK_DEFAULT_REGION="$REGION"
 EXEC_POLICY_ARN="${CDK_EXEC_POLICY_ARN:-arn:aws:iam::$ACCOUNT:policy/vuln-demo-cfn-exec}"
 
 echo ""
-echo "==> Ensuring CFN execution policy exists: $EXEC_POLICY_ARN"
-if aws iam get-policy --policy-arn "$EXEC_POLICY_ARN" >/dev/null 2>&1; then
-  echo "    already exists"
-else
-  echo "    not found - creating vuln-demo-cfn-exec"
-  POLICY_DOC="$(mktemp -t vuln-demo-cfn-exec.XXXXXX.json)"
-  trap 'rm -f "$POLICY_DOC"' EXIT
-  cat > "$POLICY_DOC" <<'JSON'
+echo "==> Ensuring CFN execution policy is up to date: $EXEC_POLICY_ARN"
+# Always render the desired policy document, then reconcile: create the
+# policy if missing, otherwise push it as a new default version so edits
+# to the document below actually reach the attached role.
+POLICY_DOC="$(mktemp -t vuln-demo-cfn-exec.XXXXXX.json)"
+trap 'rm -f "$POLICY_DOC"' EXIT
+cat > "$POLICY_DOC" <<'JSON'
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -259,6 +258,29 @@ else
   ]
 }
 JSON
+
+if aws iam get-policy --policy-arn "$EXEC_POLICY_ARN" >/dev/null 2>&1; then
+  # Policy exists: push the rendered document as a new default version.
+  # IAM caps a managed policy at 5 versions, so prune the oldest
+  # non-default version first if we're already at the limit.
+  versions=$(aws iam list-policy-versions --policy-arn "$EXEC_POLICY_ARN" \
+    --query 'Versions[?IsDefaultVersion==`false`].VersionId' --output text)
+  # shellcheck disable=SC2086
+  set -- $versions
+  if [ "$#" -ge 4 ]; then
+    oldest=$(aws iam list-policy-versions --policy-arn "$EXEC_POLICY_ARN" \
+      --query 'sort_by(Versions[?IsDefaultVersion==`false`], &CreateDate)[0].VersionId' \
+      --output text)
+    echo "    pruning oldest version $oldest"
+    aws iam delete-policy-version --policy-arn "$EXEC_POLICY_ARN" --version-id "$oldest"
+  fi
+  aws iam create-policy-version \
+    --policy-arn "$EXEC_POLICY_ARN" \
+    --policy-document "file://$POLICY_DOC" \
+    --set-as-default \
+    --query 'PolicyVersion.VersionId' --output text >/dev/null
+  echo "    updated to new default version"
+else
   aws iam create-policy \
     --policy-name vuln-demo-cfn-exec \
     --policy-document "file://$POLICY_DOC" \
