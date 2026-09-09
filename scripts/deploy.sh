@@ -175,7 +175,8 @@ cat > "$POLICY_DOC" <<'JSON'
         "lambda:InvokeFunction",
         "lambda:TagResource",
         "lambda:UntagResource",
-        "lambda:PublishLayerVersion"
+        "lambda:PublishLayerVersion",
+        "lambda:GetLayerVersion"
       ],
       "Resource": "*"
     },
@@ -239,7 +240,8 @@ cat > "$POLICY_DOC" <<'JSON'
         "iam:ListRolePolicies",
         "iam:ListAttachedRolePolicies",
         "iam:TagRole",
-        "iam:UntagRole"
+        "iam:UntagRole",
+        "iam:PassRole"
       ],
       "Resource": "arn:aws:iam::*:role/vuln-demo-*"
     },
