@@ -121,6 +121,18 @@ else
       "Resource": "*"
     },
     {
+      "Sid": "BootstrapSsmParameter",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:PutParameter",
+        "ssm:DeleteParameter",
+        "ssm:AddTagsToResource"
+      ],
+      "Resource": "arn:aws:ssm:*:*:parameter/cdk-bootstrap/*"
+    },
+    {
       "Sid": "S3",
       "Effect": "Allow",
       "Action": [
