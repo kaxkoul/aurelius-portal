@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Aurelius Capital — Client Portal</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Aurelius Capital client portal — invoices, vendor links, statements." />
+  <style>
+    :root {
+      --ink: #0d1b2a;
+      --paper: #f7f5f0;
+      --gold: #b08d57;
+      --gold-deep: #8a6c3e;
+      --line: #e6e1d6;
+      --muted: #5a6b7a;
+      --danger: #b00020;
+      --success: #1f6e3a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', -apple-system, system-ui, sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    a { color: var(--gold-deep); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    button {
+      font: inherit;
+      cursor: pointer;
+      border: 0;
+      border-radius: 4px;
+      padding: 8px 16px;
+      background: var(--ink);
+      color: var(--paper);
+      transition: background 120ms ease;
+    }
+    button:hover { background: #1d2d3f; }
+    button.gold { background: var(--gold); color: #fff; }
+    button.gold:hover { background: var(--gold-deep); }
+    button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+    button.ghost:hover { background: #fff; }
+    input, textarea, select {
+      font: inherit;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: #fff;
+      width: 100%;
+    }
+    input:focus, textarea:focus { outline: 2px solid var(--gold); outline-offset: 1px; border-color: var(--gold); }
+
+    /* ---- Top bar ---- */
+    .topbar {
+      background: var(--ink);
+      color: var(--paper);
+      padding: 14px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 3px solid var(--gold);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 600; letter-spacing: 0.02em; }
+    .brand-mark {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--gold); color: var(--ink);
+      font-weight: 700; display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+    .brand-text { font-size: 18px; }
+    .brand-sub { color: #b8c2cb; font-size: 12px; margin-left: 4px; letter-spacing: 0.05em; text-transform: uppercase; }
+    .userpill { font-size: 13px; color: #b8c2cb; }
+    .userpill .who { color: #fff; font-weight: 500; }
+
+    /* ---- Layout ---- */
+    .layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 53px); }
+    .sidenav { background: #fff; border-right: 1px solid var(--line); padding: 24px 0; }
+    .sidenav a { display: block; padding: 8px 24px; color: var(--ink); border-left: 3px solid transparent; }
+    .sidenav a.active { border-left-color: var(--gold); font-weight: 600; background: #faf7f0; }
+    .sidenav a:hover { background: #faf7f0; text-decoration: none; }
+    .nav-section { font-size: 11px; text-transform: uppercase; color: var(--muted); padding: 16px 24px 6px; letter-spacing: 0.06em; }
+
+    main { padding: 32px 48px; max-width: 1100px; }
+    h1 { margin: 0 0 4px; font-size: 26px; font-weight: 600; }
+    h2 { margin: 32px 0 16px; font-size: 18px; font-weight: 600; }
+    .breadcrumb { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+    .breadcrumb a { color: var(--muted); }
+
+    /* ---- Cards ---- */
+    .card { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 24px; }
+    .cards-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .kpi { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 18px 20px; }
+    .kpi .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .kpi .value { font-size: 26px; font-weight: 600; margin-top: 4px; }
+    .kpi .delta { color: var(--success); font-size: 12px; margin-top: 4px; }
+    .kpi .delta.neg { color: var(--danger); }
+
+    /* ---- Table ---- */
+    table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+    th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--line); font-size: 14px; }
+    th { background: #faf7f0; font-weight: 600; color: var(--muted); text-transform: uppercase; font-size: 11px; letter-spacing: 0.04em; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover { background: #faf7f0; cursor: pointer; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 500; }
+    .pill.paid { background: #e3f0e7; color: var(--success); }
+    .pill.due { background: #fdecea; color: var(--danger); }
+    .pill.draft { background: #f0eee7; color: var(--muted); }
+
+    /* ---- Forms / dialogs ---- */
+    .row { margin: 12px 0; }
+    .row label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .row.actions { display: flex; gap: 8px; margin-top: 16px; }
+    pre.payload {
+      background: #fafafa; border: 1px solid var(--line); border-radius: 4px;
+      padding: 10px; font-size: 12px; max-height: 200px; overflow: auto;
+      color: var(--muted);
+    }
+
+    /* ---- Login screen ---- */
+    .login-page { min-height: 100vh; display: grid; place-items: center; background: var(--paper); }
+    .login-card { width: 380px; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 36px 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+    .login-card .brand { justify-content: center; margin-bottom: 28px; }
+    .login-card .brand-mark { width: 40px; height: 40px; font-size: 18px; }
+    .login-card .brand-text { font-size: 22px; color: var(--ink); }
+    .login-card .tagline { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+    .login-card button[type=submit] { width: 100%; padding: 11px; margin-top: 12px; }
+    .login-card .help { text-align: center; font-size: 12px; color: var(--muted); margin-top: 24px; }
+    .err { color: var(--danger); font-size: 13px; margin-top: 8px; min-height: 18px; }
+
+    /* ---- Vendor link preview ---- */
+    .preview-card { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border: 1px solid var(--line); border-radius: 6px; background: #fafafa; margin-top: 12px; }
+    .preview-card .domain { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .preview-card .title { font-weight: 600; margin: 4px 0; }
+    .preview-card .snippet { font-size: 13px; color: var(--muted); }
+
+    /* ---- Activity feed ---- */
+    .activity-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .activity-item:last-child { border-bottom: 0; }
+    .activity-avatar {
+      width: 32px; height: 32px; border-radius: 50%; background: var(--gold); color: #fff;
+      display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px;
+      flex-shrink: 0;
+    }
+    .activity-meta { font-size: 12px; color: var(--muted); }
+
+    .footer { padding: 16px 48px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); margin-top: 48px; }
+  </style>
+</head>
+<body>
+
+  <!-- ============== LOGIN VIEW ============== -->
+  <div id="loginView" class="login-page">
+    <div class="login-card">
+      <div class="brand">
+        <span class="brand-mark">A</span>
+        <span class="brand-text">Aurelius Capital</span>
+      </div>
+      <div class="tagline">Sign in to your client portal</div>
+      <form onsubmit="event.preventDefault(); doLogin();">
+        <div class="row">
+          <label for="userInput">Email or username</label>
+          <input id="userInput" autocomplete="username" required value="alice" />
+        </div>
+        <div class="row">
+          <label for="passInput">Password</label>
+          <input id="passInput" type="password" autocomplete="current-password" required value="alice-pass-123" />
+        </div>
+        <button class="gold" type="submit">Sign in</button>
+        <div class="err" id="loginErr"></div>
+      </form>
+      <div class="help">Need help? Contact <a href="mailto:support@aurelius.example">support@aurelius.example</a></div>
+    </div>
+  </div>
+
+  <!-- ============== APP VIEW ============== -->
+  <div id="appView" style="display:none;">
+    <div class="topbar">
+      <div class="brand">
+        <span class="brand-mark">A</span>
+        <span class="brand-text">Aurelius Capital</span>
+        <span class="brand-sub">Client Portal</span>
+      </div>
+      <div class="userpill">Signed in as <span class="who" id="whoami">—</span> · <a href="#" onclick="signOut(); return false;" style="color:#b8c2cb">Sign out</a></div>
+    </div>
+
+    <div class="layout">
+      <nav class="sidenav">
+        <div class="nav-section">Workspace</div>
+        <a href="#dashboard" class="nav-link active" data-view="dashboard">Dashboard</a>
+        <a href="#invoices" class="nav-link" data-view="invoices">Invoices</a>
+        <a href="#vendors" class="nav-link" data-view="vendors">Vendor Links</a>
+        <a href="#activity" class="nav-link" data-view="activity">Activity</a>
+        <a href="#statements" class="nav-link" data-view="statements">Statements</a>
+        <div class="nav-section">Account</div>
+        <a href="#" onclick="return false;">Settings</a>
+        <a href="#" onclick="return false;">Help &amp; Docs</a>
+      </nav>
+
+      <main>
+        <!-- DASHBOARD -->
+        <section class="view" id="view-dashboard">
+          <div class="breadcrumb">Workspace › <strong>Dashboard</strong></div>
+          <h1>Welcome back, <span id="dashName">there</span></h1>
+          <div style="color:var(--muted); margin-bottom:24px">Here's what's happening with your account.</div>
+
+          <div class="cards-row">
+            <div class="kpi"><div class="label">Open invoices</div><div class="value">2</div><div class="delta">all current</div></div>
+            <div class="kpi"><div class="label">Outstanding balance</div><div class="value">$2,049.98</div><div class="delta neg">due in 14 days</div></div>
+            <div class="kpi"><div class="label">YTD spend</div><div class="value">$24,983</div><div class="delta">+8% vs prior</div></div>
+            <div class="kpi"><div class="label">Active vendors</div><div class="value">12</div><div class="delta">2 added this month</div></div>
+          </div>
+
+          <h2>Recent invoices</h2>
+          <div id="invoiceTable"></div>
+
+          <h2>Recent activity</h2>
+          <div class="card" id="activityPreview"></div>
+        </section>
+
+        <!-- INVOICES -->
+        <section class="view" id="view-invoices" style="display:none;">
+          <div class="breadcrumb">Workspace › <strong>Invoices</strong></div>
+          <h1>Invoices</h1>
+          <div style="color:var(--muted); margin-bottom:24px">Click any invoice to view its details.</div>
+          <div id="invoiceTableFull"></div>
+
+          <div id="invoiceDetail" class="card" style="margin-top:24px; display:none;"></div>
+        </section>
+
+        <!-- VENDORS (SSRF surface, framed as link preview) -->
+        <section class="view" id="view-vendors" style="display:none;">
+          <div class="breadcrumb">Workspace › <strong>Vendor Links</strong></div>
+          <h1>Vendor Links</h1>
+          <div style="color:var(--muted); margin-bottom:24px">
+            Add a vendor's website or document URL and we'll fetch a quick preview so your team can verify it.
+          </div>
+          <div class="card">
+            <div class="row">
+              <label for="vendorUrl">Vendor URL</label>
+              <input id="vendorUrl" placeholder="https://acme-supplies.example/about" value="https://example.com" />
+            </div>
+            <div class="row actions">
+              <button class="gold" onclick="addVendorLink()">Generate preview</button>
+            </div>
+            <div id="vendorPreview"></div>
+          </div>
+        </section>
+
+        <!-- ACTIVITY (XSS surface, framed as team feed) -->
+        <section class="view" id="view-activity" style="display:none;">
+          <div class="breadcrumb">Workspace › <strong>Activity</strong></div>
+          <h1>Team Activity</h1>
+          <div style="color:var(--muted); margin-bottom:24px">Notes and updates from your team. Visible to everyone with portal access.</div>
+          <div class="card">
+            <div class="row">
+              <label for="activityBody">Post a note</label>
+              <textarea id="activityBody" rows="3" placeholder="What's the update?"></textarea>
+            </div>
+            <div class="row actions">
+              <button class="gold" onclick="postActivity()">Post note</button>
+              <button class="ghost" onclick="loadActivity()">Refresh</button>
+            </div>
+          </div>
+          <h2>Feed</h2>
+          <div id="activityList" class="card"></div>
+        </section>
+
+        <!-- STATEMENTS (cmd-injection surface, framed as PDF export) -->
+        <section class="view" id="view-statements" style="display:none;">
+          <div class="breadcrumb">Workspace › <strong>Statements</strong></div>
+          <h1>Account Statements</h1>
+          <div style="color:var(--muted); margin-bottom:24px">Generate a downloadable statement for your records.</div>
+          <div class="card">
+            <div class="row">
+              <label for="stmtTitle">Statement title</label>
+              <input id="stmtTitle" value="Q3 statement — Aurelius" />
+            </div>
+            <div class="row">
+              <label for="stmtFile">Filename</label>
+              <input id="stmtFile" value="statement-q3.txt" />
+            </div>
+            <div class="row actions">
+              <button class="gold" onclick="generateStatement()">Generate statement</button>
+            </div>
+            <div id="stmtResult"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="footer">
+      © Aurelius Capital · Client Portal v2.4 · <a href="#">Privacy</a> · <a href="#">Terms</a>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = (window.__API_BASE__ || "/api-base-not-configured").replace(/\/+$/, "");
+    let token = sessionStorage.getItem("aurelius_token") || null;
+    let me    = JSON.parse(sessionStorage.getItem("aurelius_me") || "null");
+
+    // -------- routing --------
+    function showView(name) {
+      document.querySelectorAll(".view").forEach(v => v.style.display = "none");
+      const el = document.getElementById("view-" + name);
+      if (el) el.style.display = "block";
+      document.querySelectorAll(".nav-link").forEach(a => {
+        a.classList.toggle("active", a.dataset.view === name);
+      });
+      // Lazy load per-view data
+      if (name === "dashboard") loadDashboard();
+      if (name === "invoices") loadInvoices();
+      if (name === "activity") loadActivity();
+    }
+    document.querySelectorAll(".nav-link").forEach(a => {
+      a.addEventListener("click", e => {
+        e.preventDefault();
+        showView(a.dataset.view);
+      });
+    });
+
+    // -------- auth --------
+    async function doLogin() {
+      const username = userInput.value;
+      const password = passInput.value;
+      const errEl = document.getElementById("loginErr");
+      errEl.textContent = "";
+      try {
+        const r = await fetch(API_BASE + "/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+        const j = await r.json();
+        if (!r.ok || !j.token) {
+          errEl.textContent = j.error || "Sign-in failed. Check your credentials and try again.";
+          return;
+        }
+        token = j.token;
+        me = j.user;
+        sessionStorage.setItem("aurelius_token", token);
+        sessionStorage.setItem("aurelius_me", JSON.stringify(me));
+        showApp();
+      } catch (e) {
+        errEl.textContent = "Service temporarily unavailable. Please try again.";
+      }
+    }
+
+    function showApp() {
+      document.getElementById("loginView").style.display = "none";
+      document.getElementById("appView").style.display = "block";
+      document.getElementById("whoami").textContent = me?.username || "—";
+      document.getElementById("dashName").textContent = me?.username
+        ? me.username.charAt(0).toUpperCase() + me.username.slice(1)
+        : "there";
+      showView("dashboard");
+    }
+
+    function signOut() {
+      sessionStorage.removeItem("aurelius_token");
+      sessionStorage.removeItem("aurelius_me");
+      token = null; me = null;
+      document.getElementById("appView").style.display = "none";
+      document.getElementById("loginView").style.display = "grid";
+    }
+
+    function authHeaders() {
+      return token ? { "Authorization": "Bearer " + token } : {};
+    }
+
+    // -------- dashboard / invoices --------
+    function fmtMoney(cents) { return "$" + (cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 }); }
+
+    function statusFor(id) {
+      // Deterministic, plausible-looking statuses
+      return ["paid","due","draft"][id % 3];
+    }
+
+    async function loadDashboard() {
+      // Fetch a couple of orders for the recent list (uses the IDOR endpoint
+      // but here we're just listing a few, which looks normal).
+      const ids = [1, 2];
+      const recent = [];
+      for (const id of ids) {
+        try {
+          const r = await fetch(API_BASE + "/orders/" + id, { headers: authHeaders() });
+          if (r.ok) recent.push(await r.json());
+        } catch (e) { /* ignore */ }
+      }
+      document.getElementById("invoiceTable").innerHTML = renderInvoiceTable(recent, /*compact*/ true);
+      // activity preview
+      try {
+        const r = await fetch(API_BASE + "/comments");
+        const html = await r.text();
+        document.getElementById("activityPreview").innerHTML = simplifyActivityHtml(html);
+      } catch (e) {}
+    }
+
+    async function loadInvoices() {
+      // Show a richer mock-but-real-looking list. We fetch the four real
+      // ones from the backend so detail page works.
+      const ids = [1, 2, 3, 4];
+      const items = [];
+      for (const id of ids) {
+        try {
+          const r = await fetch(API_BASE + "/orders/" + id, { headers: authHeaders() });
+          if (r.ok) items.push(await r.json());
+        } catch (e) {}
+      }
+      document.getElementById("invoiceTableFull").innerHTML = renderInvoiceTable(items, /*compact*/ false);
+      document.querySelectorAll("#invoiceTableFull tr[data-id]").forEach(tr => {
+        tr.addEventListener("click", () => showInvoiceDetail(tr.dataset.id));
+      });
+    }
+
+    function renderInvoiceTable(items, compact) {
+      if (!items.length) return '<div style="color:var(--muted); padding:16px;">No invoices to show.</div>';
+      const rows = items.map(o => {
+        const id = o.id;
+        const status = statusFor(id);
+        const number = "INV-2026-" + String(id).padStart(4, "0");
+        return `<tr data-id="${id}">
+          <td>${number}</td>
+          <td>${o.item}</td>
+          <td>${fmtMoney(o.amount_cents)}</td>
+          <td><span class="pill ${status}">${status}</span></td>
+          ${compact ? '' : `<td style="color:var(--muted)">${o.note || ''}</td>`}
+        </tr>`;
+      }).join("");
+      const headExtra = compact ? '' : '<th>Memo</th>';
+      return `<table>
+        <thead><tr><th>Invoice</th><th>Description</th><th>Amount</th><th>Status</th>${headExtra}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+    }
+
+    async function showInvoiceDetail(id) {
+      const r = await fetch(API_BASE + "/orders/" + id, { headers: authHeaders() });
+      const j = await r.json();
+      const el = document.getElementById("invoiceDetail");
+      const status = statusFor(id);
+      const number = "INV-2026-" + String(id).padStart(4, "0");
+      el.style.display = "block";
+      el.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div>
+            <div style="color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:0.04em;">${number}</div>
+            <h2 style="margin:4px 0 0">${j.item || 'Invoice'}</h2>
+          </div>
+          <span class="pill ${status}">${status}</span>
+        </div>
+        <table style="margin-top:16px">
+          <tbody>
+            <tr><th style="width:30%">Amount</th><td>${fmtMoney(j.amount_cents)}</td></tr>
+            <tr><th>Memo</th><td>${j.note || '—'}</td></tr>
+            <tr><th>Issued to (account)</th><td>Account #${j.owner_user_id}</td></tr>
+            <tr><th>Date</th><td>2026-${String((id*3)%12+1).padStart(2,'0')}-${String((id*7)%28+1).padStart(2,'0')}</td></tr>
+          </tbody>
+        </table>
+      `;
+      el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    // -------- vendor links (SSRF surface) --------
+    async function addVendorLink() {
+      const url = document.getElementById("vendorUrl").value;
+      const target = document.getElementById("vendorPreview");
+      target.innerHTML = '<div class="preview-card"><div style="color:var(--muted)">Generating preview…</div></div>';
+      try {
+        const r = await fetch(API_BASE + "/fetch?url=" + encodeURIComponent(url));
+        const j = await r.json();
+        if (!r.ok) {
+          target.innerHTML = `<div class="preview-card"><div class="snippet" style="color:var(--danger)">${j.error || 'Could not load preview.'}</div></div>`;
+          return;
+        }
+        const domain = (() => { try { return new URL(j.fetched_url).hostname; } catch { return ''; } })();
+        const text = (j.body_preview || '').slice(0, 280);
+        const titleMatch = (j.body_preview || '').match(/<title>([^<]{1,120})<\/title>/i);
+        const title = titleMatch ? titleMatch[1] : domain || 'Untitled';
+        target.innerHTML = `
+          <div class="preview-card">
+            <div style="flex:1">
+              <div class="domain">${domain}</div>
+              <div class="title">${title}</div>
+              <div class="snippet">${escapeHtml(text)}…</div>
+            </div>
+          </div>`;
+      } catch (e) {
+        target.innerHTML = `<div class="preview-card"><div class="snippet" style="color:var(--danger)">Network error.</div></div>`;
+      }
+    }
+
+    // -------- activity (XSS surface) --------
+    async function postActivity() {
+      const body = document.getElementById("activityBody").value.trim();
+      if (!body) return;
+      const r = await fetch(API_BASE + "/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ body }),
+      });
+      if (r.ok) {
+        document.getElementById("activityBody").value = "";
+        loadActivity();
+      }
+    }
+
+    async function loadActivity() {
+      try {
+        const r = await fetch(API_BASE + "/comments");
+        const html = await r.text();
+        // The server returns HTML; we render it inline (this is the
+        // stored-XSS surface). UI looks like a team activity feed.
+        const list = document.getElementById("activityList");
+        list.innerHTML = simplifyActivityHtml(html);
+      } catch (e) {}
+    }
+
+    function simplifyActivityHtml(serverHtml) {
+      // Server returns <h1>…</h1><ul><li><b>user</b> (ts): body</li></ul>.
+      // We extract the <li>s and re-render as activity items. The body
+      // is still inserted as HTML — i.e. XSS payloads still execute.
+      const m = serverHtml.match(/<ul>([\s\S]*?)<\/ul>/);
+      if (!m) return '<div style="color:var(--muted); padding:8px;">No activity yet.</div>';
+      const itemsHtml = m[1];
+      const tmp = document.createElement("div");
+      tmp.innerHTML = "<ul>" + itemsHtml + "</ul>";
+      const lis = tmp.querySelectorAll("li");
+      let out = "";
+      lis.forEach(li => {
+        const userEl = li.querySelector("b");
+        const user = userEl ? userEl.textContent : "user";
+        // Strip user + leading "(ts): " so we keep just the body HTML
+        const tsMatch = li.innerHTML.match(/\(([^)]+)\):\s*([\s\S]*)$/);
+        const ts = tsMatch ? tsMatch[1] : "";
+        const bodyHtml = tsMatch ? tsMatch[2] : li.innerHTML;
+        out += `<div class="activity-item">
+          <div class="activity-avatar">${user.charAt(0).toUpperCase()}</div>
+          <div style="flex:1">
+            <div><strong>${user}</strong> <span class="activity-meta">· ${ts}</span></div>
+            <div>${bodyHtml}</div>
+          </div>
+        </div>`;
+      });
+      return out || '<div style="color:var(--muted); padding:8px;">No activity yet.</div>';
+    }
+
+    // -------- statements (cmd-injection surface) --------
+    async function generateStatement() {
+      const filename = document.getElementById("stmtFile").value;
+      const title = document.getElementById("stmtTitle").value;
+      const target = document.getElementById("stmtResult");
+      target.innerHTML = '<div style="color:var(--muted); margin-top:12px">Generating…</div>';
+      const r = await fetch(API_BASE + "/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ filename, title }),
+      });
+      const j = await r.json();
+      if (j.ok) {
+        target.innerHTML = `
+          <div class="preview-card" style="background:#e3f0e7; border-color:#b9d8c2; margin-top:16px;">
+            <div>
+              <div class="title" style="color:var(--success)">Statement ready</div>
+              <div class="snippet">${escapeHtml(j.stdout || ('Saved as ' + filename))}</div>
+            </div>
+          </div>`;
+      } else {
+        target.innerHTML = `<div class="preview-card" style="margin-top:16px"><div class="snippet" style="color:var(--danger)">${escapeHtml(j.stderr || 'Could not generate statement.')}</div></div>`;
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+    }
+
+    // -------- bootstrap --------
+    if (token && me) showApp();
+  </script>
+</body>
+</html>
