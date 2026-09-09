@@ -16,10 +16,37 @@ LAMBDA_DIR="$ROOT/lambda"
 SHARED_DIR="$LAMBDA_DIR/shared"
 FRONTEND_DIR="$ROOT/frontend"
 BUILD_DIR="$ROOT/.build"
-REGION="${AWS_REGION:-us-west-2}"
 STACK="vuln-demo"
 
+# Account comes straight from STS. Region is resolved from the same
+# precedence the AWS CLI/CDK actually use, so bootstrap + deploy always
+# target where the credentials point (avoids silently deploying to a
+# hardcoded default region). Falls back to IMDS on EC2/CloudShell.
 ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+
+resolve_region() {
+  # 1) AWS_REGION  2) AWS_DEFAULT_REGION  3) active profile config
+  local r="${AWS_REGION:-${AWS_DEFAULT_REGION:-$(aws configure get region 2>/dev/null || true)}}"
+  # 4) instance/container metadata (EC2, CloudShell) via IMDSv2
+  if [ -z "$r" ]; then
+    local token
+    token=$(curl -sS -m 2 -X PUT "http://169.254.169.254/latest/api/token" \
+      -H "X-aws-ec2-metadata-token-ttl-seconds: 60" 2>/dev/null || true)
+    if [ -n "$token" ]; then
+      r=$(curl -sS -m 2 -H "X-aws-ec2-metadata-token: $token" \
+        "http://169.254.169.254/latest/meta-data/placement/region" 2>/dev/null || true)
+    fi
+  fi
+  printf '%s' "$r"
+}
+
+REGION="$(resolve_region)"
+if [ -z "$REGION" ]; then
+  echo "ERROR: could not determine AWS region." >&2
+  echo "  Set AWS_REGION, run 'aws configure set region <region>', or run from EC2/CloudShell." >&2
+  exit 1
+fi
+
 echo "==> Account: $ACCOUNT"
 echo "==> Region:  $REGION"
 
@@ -47,17 +74,29 @@ source "$CDK_DIR/.venv/bin/activate"
 pip install --quiet --upgrade pip
 pip install --quiet -r "$CDK_DIR/requirements.txt"
 
-# 3. cdk deploy -------------------------------------------------------
+# 3. cdk bootstrap (scoped execution policy) --------------------------
+# Bootstrap with the vuln-demo-cfn-exec managed policy instead of the
+# default AdministratorAccess, so the CDKToolkit execution role is scoped
+# to only the services this stack needs. Override the ARN via
+# CDK_EXEC_POLICY_ARN if you named the policy differently.
 echo ""
-echo "==> cdk deploy $STACK to $REGION"
+echo "==> cdk bootstrap $REGION (scoped execution policy)"
 cd "$CDK_DIR"
 export CDK_DEFAULT_ACCOUNT="$ACCOUNT"
 export CDK_DEFAULT_REGION="$REGION"
+EXEC_POLICY_ARN="${CDK_EXEC_POLICY_ARN:-arn:aws:iam::$ACCOUNT:policy/vuln-demo-cfn-exec}"
+echo "    execution policy: $EXEC_POLICY_ARN"
+cdk bootstrap "aws://$ACCOUNT/$REGION" \
+  --cloudformation-execution-policies "$EXEC_POLICY_ARN"
+
+# 4. cdk deploy -------------------------------------------------------
+echo ""
+echo "==> cdk deploy $STACK to $REGION"
 cdk deploy "$STACK" \
   --require-approval never \
   --outputs-file ./outputs.json
 
-# 4. Patch frontend with API URL --------------------------------------
+# 5. Patch frontend with API URL --------------------------------------
 echo ""
 echo "==> Injecting API URL into frontend"
 API_URL=$(python3 -c "import json; d=json.load(open('outputs.json')); print(d['$STACK']['ApiUrl'].rstrip('/'))")
@@ -88,7 +127,7 @@ aws cloudfront create-invalidation \
   --query 'Invalidation.Id' --output text \
   --region "$REGION" >/dev/null
 
-# 5. Done -------------------------------------------------------------
+# 6. Done -------------------------------------------------------------
 cat <<EOF
 
 ============================================================
