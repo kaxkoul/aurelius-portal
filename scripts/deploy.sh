@@ -174,7 +174,8 @@ cat > "$POLICY_DOC" <<'JSON'
         "lambda:RemovePermission",
         "lambda:InvokeFunction",
         "lambda:TagResource",
-        "lambda:UntagResource"
+        "lambda:UntagResource",
+        "lambda:PublishLayerVersion"
       ],
       "Resource": "*"
     },
